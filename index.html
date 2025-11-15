@@ -32,7 +32,9 @@
             <strong id="best">―</strong>
           </div>
         </header>
-        <p id="message" class="message">START ボタンで 15 パズルに挑戦！</p>
+        <p id="message" class="message" role="status" aria-live="polite">
+          START ボタンで 15 パズルに挑戦！
+        </p>
         <div
           id="puzzle-board"
           class="puzzle-board"
@@ -48,6 +50,7 @@
           <li>空白マスの隣にあるピースをタップ／クリックすると、そのピースが空白と入れ替わります。</li>
           <li>数字が 1 〜 15 の順番に並べばクリア。最小手数を目指しましょう。</li>
           <li>ベスト手数はブラウザに保存され、いつでも更新できます。</li>
+          <li>キーボードの場合は矢印キーで空白マスを動かして揃えられます。</li>
         </ul>
       </section>
     </main>

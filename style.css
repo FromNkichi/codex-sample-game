@@ -110,6 +110,11 @@ main {
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
 }
 
+.tile:focus-visible {
+  outline: 3px solid #f97316;
+  outline-offset: 3px;
+}
+
 .tile:active {
   transform: scale(0.96);
 }

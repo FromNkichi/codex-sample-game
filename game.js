@@ -19,6 +19,8 @@ const state = {
   best: Number(localStorage.getItem(STORAGE_KEY)) || null,
 };
 
+const DIRECTION_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+
 function formatTime(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -27,6 +29,44 @@ function formatTime(totalSeconds) {
 
 function boardsAreEqual(a, b) {
   return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function getTileIndexForDirection(direction) {
+  const emptyIndex = state.board.indexOf(0);
+  const row = Math.floor(emptyIndex / GRID_SIZE);
+  const col = emptyIndex % GRID_SIZE;
+
+  switch (direction) {
+    case "ArrowUp":
+      return row < GRID_SIZE - 1 ? emptyIndex + GRID_SIZE : null;
+    case "ArrowDown":
+      return row > 0 ? emptyIndex - GRID_SIZE : null;
+    case "ArrowLeft":
+      return col < GRID_SIZE - 1 ? emptyIndex + 1 : null;
+    case "ArrowRight":
+      return col > 0 ? emptyIndex - 1 : null;
+    default:
+      return null;
+  }
+}
+
+function applyMove(tileIndex) {
+  if (tileIndex == null) {
+    return false;
+  }
+  const nextBoard = moveTile(state.board, tileIndex, GRID_SIZE);
+  if (boardsAreEqual(nextBoard, state.board)) {
+    return false;
+  }
+  state.board = nextBoard;
+  state.moves += 1;
+  renderBoard();
+  if (isSolved(state.board)) {
+    finishGame();
+  } else {
+    updateHud();
+  }
+  return true;
 }
 
 function renderBoard() {
@@ -79,7 +119,8 @@ function startGame() {
   state.running = true;
   state.moves = 0;
   state.elapsed = 0;
-  messageElement.textContent = "空白マスの隣のピースをタップして順番に並べましょう。";
+  messageElement.textContent =
+    "空白マスの隣のピースをタップ／矢印キーで動かして順番に並べましょう。";
   startButton.textContent = "リセット";
   renderBoard();
   updateHud();
@@ -106,17 +147,16 @@ function handleTileClick(event) {
   const target = event.target.closest(".tile");
   if (!target || target.classList.contains("tile--empty")) return;
   const index = Number(target.dataset.index);
-  const nextBoard = moveTile(state.board, index, GRID_SIZE);
-  if (boardsAreEqual(nextBoard, state.board)) {
+  applyMove(index);
+}
+
+function handleKeyDown(event) {
+  if (!state.running || !DIRECTION_KEYS.has(event.key)) {
     return;
   }
-  state.board = nextBoard;
-  state.moves += 1;
-  renderBoard();
-  updateHud();
-  if (isSolved(state.board)) {
-    finishGame();
-  }
+  event.preventDefault();
+  const tileIndex = getTileIndexForDirection(event.key);
+  applyMove(tileIndex);
 }
 
 function init() {
@@ -127,5 +167,6 @@ function init() {
 
 startButton.addEventListener("click", startGame);
 boardElement.addEventListener("click", handleTileClick);
+window.addEventListener("keydown", handleKeyDown);
 
 init();

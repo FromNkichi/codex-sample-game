@@ -1,6 +1,6 @@
 # Codex Sample Game
 
-GitHub Pages にデプロイするための最小構成の Web ゲームです。リポジトリの `Settings > Pages` で `main` ブランチのルートを公開すれば、そのままホスティングできます。
+GitHub Pages にデプロイするための最小構成の Web ゲームです。現在は 15 パズルを題材としたスライドパズルとなっており、リポジトリの `Settings > Pages` で `main` ブランチのルートを公開すればそのままホスティングできます。
 
 ## 開発
 
@@ -14,9 +14,11 @@ CI では GitHub Actions が `npm test` を自動実行し、ゲームロジッ�
 
 ## 仕組み
 
-- `index.html` – ページのマークアップと UI。
-- `style.css` – GitHub Pages でもそのまま読み込めるシンプルなスタイル。
-- `game.js` – Canvas を使ったシンプルなコア集めゲーム。ハイスコアは `localStorage` に保存されます。
+- `index.html` – 盤面や HUD、解説セクションなどのマークアップ。
+- `style.css` – タッチ操作とデスクトップ操作の両方に対応したレスポンシブなスタイル。
+- `engine.js` – スライドパズル用のボード生成／シャッフル／勝利判定ヘルパー。
+- `engine.test.js` – ボードロジックのユニットテスト。
+- `game.js` – DOM を介した 15 パズルの実装。HUD、ベスト手数の保存、キーボード操作にも対応しています。
 
 ## デプロイ手順
 
