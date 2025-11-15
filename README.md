@@ -1,4 +1,4 @@
-# Codex Sample Game
+# Core Collector Game
 
 GitHub Pages にデプロイするための最小構成の Web ゲームです。リポジトリの `Settings > Pages` で `main` ブランチのルートを公開すれば、そのままホスティングできます。
 
