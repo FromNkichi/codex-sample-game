@@ -10,9 +10,11 @@ const STONE_CYCLES = {
   black: [0.9, 0.7],
   white: [0.1, 0.3],
 };
+const BOARD_PADDING_RATIO = 0.085;
 
 const elements = {
   board: document.getElementById("board"),
+  boardCanvas: document.getElementById("board-canvas"),
   statuses: document.querySelectorAll("[data-status]"),
   stoneInfos: document.querySelectorAll("[data-stone-info]"),
   decisionInfos: document.querySelectorAll("[data-decision-info]"),
@@ -22,6 +24,15 @@ const elements = {
   backButtons: document.querySelectorAll('[data-action="back"]'),
   log: document.getElementById("log"),
 };
+
+const boardCtx = elements.boardCanvas?.getContext("2d");
+const canvasState = {
+  size: 0,
+  padding: 0,
+  gridStep: 0,
+  dpr: window.devicePixelRatio || 1,
+};
+let hoverCellIndex = null;
 
 const state = {
   board: createEmptyBoard(BOARD_SIZE),
@@ -36,8 +47,6 @@ const state = {
   viewingObservation: false,
   pendingTurnSwitch: false,
 };
-
-elements.board.style.setProperty("--board-size", BOARD_SIZE);
 
 function defaultState() {
   state.board = createEmptyBoard(BOARD_SIZE);
@@ -97,19 +106,75 @@ function addLog(message) {
   state.log = state.log.slice(0, 6);
 }
 
-function handleCellClick(event) {
-  if (state.gameOver || state.awaitingDecision || state.viewingObservation) return;
-  const cell = event.target.closest(".cell");
-  if (!cell || !elements.board.contains(cell)) return;
-  const { index } = cell.dataset;
-  if (index === undefined) return;
-  const idx = Number(index);
-  if (Number.isNaN(idx) || state.board[idx]) return;
+function canInteractWithBoard() {
+  return !(state.gameOver || state.awaitingDecision || state.viewingObservation);
+}
+
+function getCanvasPoint(event) {
+  if (!elements.boardCanvas) return null;
+  const rect = elements.boardCanvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return { x, y };
+}
+
+function locateCellIndex(point) {
+  if (!point || !canvasState.size) return null;
+  const { padding, gridStep } = canvasState;
+  const relativeX = point.x - padding;
+  const relativeY = point.y - padding;
+  const column = Math.round(relativeX / gridStep);
+  const row = Math.round(relativeY / gridStep);
+  if (column < 0 || column >= BOARD_SIZE || row < 0 || row >= BOARD_SIZE) {
+    return null;
+  }
+  const targetX = padding + column * gridStep;
+  const targetY = padding + row * gridStep;
+  const tolerance = gridStep * 0.4;
+  if (Math.abs(targetX - point.x) > tolerance || Math.abs(targetY - point.y) > tolerance) {
+    return null;
+  }
+  return row * BOARD_SIZE + column;
+}
+
+function getCellFromEvent(event) {
+  const point = getCanvasPoint(event);
+  return locateCellIndex(point);
+}
+
+function setHoverCell(index) {
+  if (hoverCellIndex === index) return;
+  hoverCellIndex = index;
+  drawBoardCanvas();
+}
+
+function handleBoardClick(event) {
+  if (!canInteractWithBoard()) return;
+  const idx = getCellFromEvent(event);
+  if (idx === null || state.board[idx]) return;
   const probability = getNextProbability(state.currentPlayer);
   state.board = placeStone(state.board, idx, state.currentPlayer, probability);
   state.awaitingDecision = true;
   addLog(`${describePlayer(state.currentPlayer)}が${Math.round(probability * 100)}%の石を置いた。`);
   render();
+}
+
+function handleBoardPointerMove(event) {
+  if (!canInteractWithBoard()) {
+    setHoverCell(null);
+    return;
+  }
+  const idx = getCellFromEvent(event);
+  if (idx === null || state.board[idx]) {
+    setHoverCell(null);
+    return;
+  }
+  setHoverCell(idx);
+}
+
+function handleBoardPointerLeave() {
+  setHoverCell(null);
 }
 
 function switchTurn() {
@@ -177,6 +242,216 @@ function revertBoard() {
   render();
 }
 
+function updateCanvasMetrics() {
+  if (!elements.boardCanvas) return;
+  const rect = elements.boardCanvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const size = Math.min(rect.width, rect.height);
+  const dpr = window.devicePixelRatio || 1;
+  elements.boardCanvas.width = size * dpr;
+  elements.boardCanvas.height = size * dpr;
+  canvasState.size = size;
+  canvasState.dpr = dpr;
+  canvasState.padding = size * BOARD_PADDING_RATIO;
+  canvasState.gridStep = (size - canvasState.padding * 2) / (BOARD_SIZE - 1);
+}
+
+function getStoneRadius() {
+  if (!canvasState.gridStep) return 0;
+  return Math.min(canvasState.gridStep * 0.36, canvasState.size * 0.045);
+}
+
+function getCellCenter(index) {
+  const column = index % BOARD_SIZE;
+  const row = Math.floor(index / BOARD_SIZE);
+  const x = canvasState.padding + column * canvasState.gridStep;
+  const y = canvasState.padding + row * canvasState.gridStep;
+  return { x, y };
+}
+
+function drawBoardCanvas() {
+  if (!boardCtx || !canvasState.size) return;
+  const { dpr } = canvasState;
+  boardCtx.save();
+  boardCtx.clearRect(0, 0, elements.boardCanvas.width, elements.boardCanvas.height);
+  boardCtx.scale(dpr, dpr);
+  drawBoardBackground(boardCtx);
+  drawGridLines(boardCtx);
+  drawStarPoints(boardCtx);
+  drawStones(boardCtx);
+  if (
+    hoverCellIndex !== null &&
+    canInteractWithBoard() &&
+    !state.board[hoverCellIndex]
+  ) {
+    drawHoverIndicator(boardCtx);
+  }
+  boardCtx.restore();
+}
+
+function drawBoardBackground(ctx) {
+  const { size, padding } = canvasState;
+  const gradient = ctx.createLinearGradient(0, 0, size, size);
+  gradient.addColorStop(0, "#f9e5b9");
+  gradient.addColorStop(1, "#cfa262");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#f8e0ac";
+  ctx.fillRect(padding, padding, size - padding * 2, size - padding * 2);
+}
+
+function drawGridLines(ctx) {
+  const { padding, gridStep, size } = canvasState;
+  const start = padding;
+  const end = size - padding;
+  ctx.strokeStyle = "rgba(71, 45, 16, 0.85)";
+  ctx.lineWidth = Math.max(1.25, gridStep * 0.05);
+  ctx.lineCap = "round";
+  for (let i = 0; i < BOARD_SIZE; i += 1) {
+    const offset = start + i * gridStep;
+    ctx.beginPath();
+    ctx.moveTo(start, offset);
+    ctx.lineTo(end, offset);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(offset, start);
+    ctx.lineTo(offset, end);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(77, 50, 13, 0.9)";
+  ctx.lineWidth = Math.max(2, gridStep * 0.08);
+  ctx.strokeRect(start, start, end - start, end - start);
+}
+
+function getStarPointCoordinates() {
+  if (BOARD_SIZE < 7) return [];
+  const margin = BOARD_SIZE >= 13 ? 3 : 2;
+  const coords = [];
+  const corners = [margin, BOARD_SIZE - 1 - margin];
+  corners.forEach((x) => {
+    corners.forEach((y) => {
+      coords.push({ x, y });
+    });
+  });
+  if (BOARD_SIZE % 2 === 1) {
+    const center = Math.floor(BOARD_SIZE / 2);
+    coords.push({ x: center, y: center });
+  }
+  return coords;
+}
+
+function drawStarPoints(ctx) {
+  const { padding, gridStep } = canvasState;
+  const starRadius = Math.max(2.5, gridStep * 0.08);
+  ctx.fillStyle = "rgba(66, 41, 13, 0.8)";
+  getStarPointCoordinates().forEach(({ x, y }) => {
+    const cx = padding + x * gridStep;
+    const cy = padding + y * gridStep;
+    ctx.beginPath();
+    ctx.arc(cx, cy, starRadius, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawHoverIndicator(ctx) {
+  if (hoverCellIndex === null) return;
+  const { x, y } = getCellCenter(hoverCellIndex);
+  const radius = getStoneRadius() * 0.95;
+  ctx.save();
+  ctx.setLineDash([4, 6]);
+  ctx.lineWidth = Math.max(1, radius * 0.25);
+  ctx.strokeStyle = "rgba(66, 41, 13, 0.7)";
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawStones(ctx) {
+  const radius = getStoneRadius();
+  if (!radius) return;
+  state.board.forEach((cell, index) => {
+    if (!cell) return;
+    const center = getCellCenter(index);
+    if (typeof cell === "string") {
+      drawResolvedStone(ctx, center, radius, cell);
+    } else {
+      drawProbabilityStone(ctx, center, radius, cell);
+    }
+  });
+}
+
+function drawProbabilityStone(ctx, center, radius, cell) {
+  const probability = clampProbability(cell.probability);
+  const tone = blendStoneColor(probability);
+  drawCircle(ctx, center.x, center.y, radius, tone.fill, "rgba(24, 17, 8, 0.35)");
+  ctx.fillStyle = tone.text;
+  ctx.font = `700 ${Math.min(radius * 0.85, 18)}px "Noto Sans JP", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`${Math.round(probability * 100)}`, center.x, center.y + 0.5);
+}
+
+function drawResolvedStone(ctx, center, radius, color) {
+  const lightOffset = radius * 0.35;
+  const gradient = ctx.createRadialGradient(
+    center.x - lightOffset,
+    center.y - lightOffset,
+    radius * 0.1,
+    center.x,
+    center.y,
+    radius
+  );
+  if (color === "black") {
+    gradient.addColorStop(0, "#5b5b5b");
+    gradient.addColorStop(1, "#050505");
+  } else {
+    gradient.addColorStop(0, "#ffffff");
+    gradient.addColorStop(1, "#d5d0c1");
+  }
+  drawCircle(ctx, center.x, center.y, radius, gradient, "rgba(24, 17, 8, 0.4)");
+  if (color === "white") {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+    ctx.beginPath();
+    ctx.ellipse(
+      center.x - radius * 0.3,
+      center.y - radius * 0.3,
+      radius * 0.35,
+      radius * 0.25,
+      -Math.PI / 4,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+  }
+}
+
+function drawCircle(ctx, x, y, radius, fillStyle, strokeStyle) {
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = fillStyle;
+  ctx.fill();
+  if (strokeStyle) {
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = Math.max(1, radius * 0.08);
+    ctx.stroke();
+  }
+}
+
+function initializeBoardCanvas() {
+  if (!elements.boardCanvas || !boardCtx) return;
+  const resize = () => {
+    updateCanvasMetrics();
+    drawBoardCanvas();
+  };
+  resize();
+  window.addEventListener("resize", resize);
+  if (typeof ResizeObserver !== "undefined") {
+    const observer = new ResizeObserver(resize);
+    observer.observe(elements.board);
+  }
+}
+
 function render() {
   renderBoard();
   renderStatus();
@@ -185,50 +460,10 @@ function render() {
 
 function renderBoard() {
   elements.board.classList.toggle("observation-view", state.viewingObservation);
-  elements.board.innerHTML = "";
-  state.board.forEach((cell, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "cell";
-    button.dataset.index = index;
-    const x = index % BOARD_SIZE;
-    const y = Math.floor(index / BOARD_SIZE);
-    button.style.setProperty("--cell-x", x);
-    button.style.setProperty("--cell-y", y);
-    if (y === 0) button.classList.add("cell-top-edge");
-    if (y === BOARD_SIZE - 1) button.classList.add("cell-bottom-edge");
-    if (x === 0) button.classList.add("cell-left-edge");
-    if (x === BOARD_SIZE - 1) button.classList.add("cell-right-edge");
-    if (!cell) {
-      button.setAttribute("aria-label", "空の交点");
-    } else if (typeof cell === "string") {
-      const stone = document.createElement("span");
-      stone.className = "stone";
-      stone.classList.add("resolved", cell);
-      button.setAttribute("aria-label", `${describePlayer(cell)}の確定石`);
-      button.appendChild(stone);
-    } else {
-      const stone = document.createElement("span");
-      stone.className = "stone";
-      const probability = clampProbability(cell.probability);
-      const percentage = Math.round(probability * 100);
-      const tone = blendStoneColor(probability);
-      stone.classList.add("probability-stone");
-      stone.textContent = `${percentage}`;
-      stone.style.setProperty("--stone-fill", tone.fill);
-      stone.style.setProperty("--stone-text-color", tone.text);
-      button.setAttribute(
-        "aria-label",
-        `${describePlayer(cell.player)}の${percentage}%で黒になる石`
-      );
-      button.appendChild(stone);
-    }
-    button.classList.toggle("cell-has-stone", Boolean(cell));
-    if (state.gameOver || state.awaitingDecision || state.viewingObservation) {
-      button.disabled = true;
-    }
-    elements.board.appendChild(button);
-  });
+  if (!canInteractWithBoard()) {
+    hoverCellIndex = null;
+  }
+  drawBoardCanvas();
 }
 
 function updateText(nodes, text) {
@@ -289,10 +524,13 @@ function renderLog() {
   });
 }
 
-elements.board.addEventListener("click", handleCellClick);
+elements.boardCanvas.addEventListener("click", handleBoardClick);
+elements.boardCanvas.addEventListener("pointermove", handleBoardPointerMove);
+elements.boardCanvas.addEventListener("pointerleave", handleBoardPointerLeave);
 elements.observeButtons.forEach((button) => button.addEventListener("click", observeBoard));
 elements.skipButtons.forEach((button) => button.addEventListener("click", skipObservation));
 elements.resetButtons.forEach((button) => button.addEventListener("click", resetGame));
 elements.backButtons.forEach((button) => button.addEventListener("click", revertBoard));
 
+initializeBoardCanvas();
 defaultState();
