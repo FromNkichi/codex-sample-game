@@ -68,6 +68,8 @@ main.page.game-page {
   position: relative;
   transition: background 200ms ease, box-shadow 200ms ease, transform 200ms ease,
     border-color 200ms ease;
+  --panel-rotation: 0deg;
+  transform: rotate(var(--panel-rotation));
 }
 
 .player-panel::after {
@@ -82,7 +84,7 @@ main.page.game-page {
 
 .player-panel.is-active {
   box-shadow: 0 18px 35px rgba(57, 40, 18, 0.4);
-  transform: translateY(-2px);
+  transform: rotate(var(--panel-rotation)) translateY(-2px);
 }
 
 .player-panel.is-active::after {
@@ -91,6 +93,10 @@ main.page.game-page {
 
 .player-panel.is-inactive {
   opacity: 0.85;
+}
+
+.player-panel[data-player-panel="white"] {
+  --panel-rotation: 180deg;
 }
 
 .player-panel[data-player-panel="white"].is-active {
