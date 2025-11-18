@@ -209,7 +209,13 @@ function handleBoardClick(event) {
   const idx = getCellFromEvent(event);
   if (idx === null || state.board[idx]) return;
   const probability = getNextProbability(state.currentPlayer);
-  state.board = placeStone(state.board, idx, state.currentPlayer, probability);
+  state.board = placeStone(
+    state.board,
+    idx,
+    state.currentPlayer,
+    probability,
+    state.currentPlayer,
+  );
   state.awaitingDecision = true;
   addLog(`${describePlayer(state.currentPlayer)}が${Math.round(probability * 100)}%の石を置いた。`);
   render();
@@ -317,7 +323,7 @@ function updateCanvasMetrics() {
 
 function getStoneRadius() {
   if (!canvasState.gridStep) return 0;
-  return Math.min(canvasState.gridStep * 0.36, canvasState.size * 0.045);
+  return Math.min(canvasState.gridStep * 0.45, canvasState.size * 0.06);
 }
 
 function getCellCenter(index) {
@@ -444,11 +450,36 @@ function drawProbabilityStone(ctx, center, radius, cell) {
   const probability = clampProbability(cell.probability);
   const tone = blendStoneColor(probability);
   drawCircle(ctx, center.x, center.y, radius, tone.fill, "rgba(24, 17, 8, 0.35)");
-  ctx.fillStyle = tone.text;
-  ctx.font = `700 ${Math.min(radius * 0.85, 18)}px "Noto Sans JP", sans-serif`;
+  const whiteProbability = Math.round((1 - probability) * 100);
+  const blackProbability = Math.round(probability * 100);
+  const facing = cell.orientation === "white" ? "white" : "black";
+  const topText =
+    facing === "white"
+      ? { label: "白", value: whiteProbability }
+      : { label: "黒", value: blackProbability };
+  const bottomText =
+    facing === "white"
+      ? { label: "黒", value: blackProbability }
+      : { label: "白", value: whiteProbability };
+  drawProbabilityText(ctx, center, radius, tone.text, topText, -1);
+  drawProbabilityText(ctx, center, radius, tone.text, bottomText, 1);
+}
+
+function drawProbabilityText(ctx, center, radius, color, textInfo, direction) {
+  ctx.save();
+  ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(`${Math.round(probability * 100)}`, center.x, center.y + 0.5);
+  const labelFontSize = Math.min(radius * 0.32, 12);
+  const valueFontSize = Math.min(radius * 0.48, 17);
+  const offset = radius * 0.55 * direction;
+  const labelOffset = offset - direction * valueFontSize * 0.4;
+  const valueOffset = offset + direction * labelFontSize * 0.2;
+  ctx.font = `600 ${labelFontSize}px "Noto Sans JP", sans-serif`;
+  ctx.fillText(textInfo.label, center.x, center.y + labelOffset);
+  ctx.font = `700 ${valueFontSize}px "Noto Sans JP", sans-serif`;
+  ctx.fillText(`${textInfo.value}%`, center.x, center.y + valueOffset);
+  ctx.restore();
 }
 
 function drawResolvedStone(ctx, center, radius, color) {

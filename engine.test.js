@@ -30,7 +30,11 @@ test("placeStone inserts a probabilistic stone without mutating the original", (
   const board = makeBoard();
   const updated = placeStone(board, 10, "black", 0.9);
   assert.equal(board[10], null);
-  assert.deepEqual(updated[10], { player: "black", probability: 0.9 });
+  assert.deepEqual(updated[10], {
+    player: "black",
+    probability: 0.9,
+    orientation: "black",
+  });
 });
 
 test("hasFiveInRow detects consecutive stones", () => {

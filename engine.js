@@ -7,7 +7,7 @@ export function createEmptyBoard(size = DEFAULT_BOARD_SIZE) {
   return Array.from({ length: size * size }, () => null);
 }
 
-export function placeStone(board, index, player, probability) {
+export function placeStone(board, index, player, probability, orientation = player) {
   if (!board || !Array.isArray(board)) {
     throw new Error("Board must be an array");
   }
@@ -20,8 +20,9 @@ export function placeStone(board, index, player, probability) {
   if (probability < 0 || probability > 1) {
     throw new Error("Probability must be between 0 and 1");
   }
+  const facing = orientation === "white" ? "white" : "black";
   const next = board.slice();
-  next[index] = { player, probability };
+  next[index] = { player, probability, orientation: facing };
   return next;
 }
 
