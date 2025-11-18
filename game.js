@@ -11,10 +11,12 @@ const STONE_CYCLES = {
   white: [0.1, 0.3],
 };
 const BOARD_PADDING_RATIO = 0.085;
+const MOBILE_BREAKPOINT = 640;
 
 const elements = {
   board: document.getElementById("board"),
   boardCanvas: document.getElementById("board-canvas"),
+  boardWrapper: document.querySelector(".board-wrapper"),
   statuses: document.querySelectorAll("[data-status]"),
   stoneInfos: document.querySelectorAll("[data-stone-info]"),
   decisionInfos: document.querySelectorAll("[data-decision-info]"),
@@ -25,6 +27,7 @@ const elements = {
 };
 
 const boardCtx = elements.boardCanvas?.getContext("2d");
+const mobileMediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
 const canvasState = {
   size: 0,
   padding: 0,
@@ -99,6 +102,34 @@ function describePlayer(player) {
 }
 
 function addLog() {}
+
+function updateMobileLayout() {
+  const root = document.documentElement;
+  if (!root) return;
+  if (!mobileMediaQuery.matches) {
+    root.style.removeProperty("--mobile-board-size");
+    root.style.removeProperty("--mobile-panel-height");
+    return;
+  }
+  const viewportWidth = Math.min(window.innerWidth, document.documentElement.clientWidth);
+  const boardSize = viewportWidth;
+  const viewportHeight = window.innerHeight;
+  const remainingHeight = Math.max(viewportHeight - boardSize, 0);
+  const panelHeight = remainingHeight / 2;
+  root.style.setProperty("--mobile-board-size", `${boardSize}px`);
+  root.style.setProperty("--mobile-panel-height", `${panelHeight}px`);
+}
+
+function initializeResponsiveLayout() {
+  updateMobileLayout();
+  window.addEventListener("resize", updateMobileLayout);
+  window.addEventListener("orientationchange", updateMobileLayout);
+  if (typeof mobileMediaQuery.addEventListener === "function") {
+    mobileMediaQuery.addEventListener("change", updateMobileLayout);
+  } else if (typeof mobileMediaQuery.addListener === "function") {
+    mobileMediaQuery.addListener(updateMobileLayout);
+  }
+}
 
 function canInteractWithBoard() {
   return !(state.gameOver || state.awaitingDecision || state.viewingObservation);
@@ -516,5 +547,6 @@ elements.skipButtons.forEach((button) => button.addEventListener("click", skipOb
 elements.resetButtons.forEach((button) => button.addEventListener("click", resetGame));
 elements.backButtons.forEach((button) => button.addEventListener("click", revertBoard));
 
+initializeResponsiveLayout();
 initializeBoardCanvas();
 defaultState();
