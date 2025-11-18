@@ -611,15 +611,31 @@ function estimateObservationOdds(board, size, samples = OBSERVATION_SIMULATION_C
   };
 }
 
+function formatObservationPercentage(probability) {
+  if (!probability) {
+    return "0.00%";
+  }
+  const clamped = clampProbability(probability);
+  const scaled = Math.ceil(clamped * 10000) / 100;
+  return `${scaled.toFixed(2)}%`;
+}
+
 function updatePlayerOdds(odds) {
   const baseLabel = "今観測した場合の五目率";
   elements.playerOdds.forEach((element) => {
     const color = element.dataset.playerOdds;
     if (!color) return;
-    if (odds && typeof odds[color] === "number") {
-      element.textContent = `${baseLabel}: ${Math.round(odds[color] * 100)}%`;
+    if (odds) {
+      const opponent = color === "black" ? "white" : "black";
+      const selfProbability =
+        typeof odds[color] === "number" ? formatObservationPercentage(odds[color]) : "--%";
+      const opponentProbability =
+        typeof odds[opponent] === "number"
+          ? formatObservationPercentage(odds[opponent])
+          : "--%";
+      element.textContent = `${baseLabel}: 自分${selfProbability} / 相手${opponentProbability}`;
     } else {
-      element.textContent = `${baseLabel}: --%`;
+      element.textContent = `${baseLabel}: 自分--% / 相手--%`;
     }
   });
 }
