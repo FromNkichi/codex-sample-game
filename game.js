@@ -23,8 +23,10 @@ const elements = {
   observeButtons: document.querySelectorAll('[data-action="observe"]'),
   skipButtons: document.querySelectorAll('[data-action="skip"]'),
   resetButtons: document.querySelectorAll('[data-action="reset"]'),
-  backButtons: document.querySelectorAll('[data-action="back"]'),
 };
+
+const OBSERVE_LABEL = "観測する";
+const RETURN_LABEL = "量子盤面にもどる";
 
 const boardCtx = elements.boardCanvas?.getContext("2d");
 const mobileMediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
@@ -502,6 +504,16 @@ function toggleButtons(buttons, disabled) {
   });
 }
 
+function updateObserveButtons() {
+  const canReturnToQuantumBoard = state.viewingObservation && !state.gameOver;
+  const canObserve = state.awaitingDecision && !state.gameOver && !state.viewingObservation;
+  const shouldDisable = !(canReturnToQuantumBoard || canObserve);
+  toggleButtons(elements.observeButtons, shouldDisable);
+  elements.observeButtons.forEach((button) => {
+    button.textContent = canReturnToQuantumBoard ? RETURN_LABEL : OBSERVE_LABEL;
+  });
+}
+
 function renderStatus() {
   if (state.gameOver) {
     if (state.observerWin) {
@@ -533,19 +545,25 @@ function renderStatus() {
         : "空いているマスを選んで石を置いてください。"
     );
   }
-  const observationDisabled = !state.awaitingDecision || state.gameOver || state.viewingObservation;
-  toggleButtons(elements.observeButtons, observationDisabled);
-  toggleButtons(elements.skipButtons, observationDisabled);
-  toggleButtons(elements.backButtons, !(state.viewingObservation && !state.gameOver));
+  updateObserveButtons();
+  const skipDisabled = !state.awaitingDecision || state.gameOver || state.viewingObservation;
+  toggleButtons(elements.skipButtons, skipDisabled);
+}
+
+function handlePrimaryAction() {
+  if (state.viewingObservation && !state.gameOver) {
+    revertBoard();
+    return;
+  }
+  observeBoard();
 }
 
 elements.boardCanvas.addEventListener("click", handleBoardClick);
 elements.boardCanvas.addEventListener("pointermove", handleBoardPointerMove);
 elements.boardCanvas.addEventListener("pointerleave", handleBoardPointerLeave);
-elements.observeButtons.forEach((button) => button.addEventListener("click", observeBoard));
+elements.observeButtons.forEach((button) => button.addEventListener("click", handlePrimaryAction));
 elements.skipButtons.forEach((button) => button.addEventListener("click", skipObservation));
 elements.resetButtons.forEach((button) => button.addEventListener("click", resetGame));
-elements.backButtons.forEach((button) => button.addEventListener("click", revertBoard));
 
 initializeResponsiveLayout();
 initializeBoardCanvas();
