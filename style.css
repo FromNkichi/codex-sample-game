@@ -63,6 +63,12 @@ main.page.game-page {
   gap: 0.75rem;
 }
 
+.player-summary {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
 .player-panel.self-panel {
   text-align: right;
   align-items: flex-end;
@@ -131,10 +137,6 @@ main.page.game-page {
     position: absolute;
     inset: 0;
   }
-}
-
-.player-panel .status-block {
-  width: 100%;
 }
 
 .board.observation-view::after {
