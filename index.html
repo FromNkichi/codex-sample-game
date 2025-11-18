@@ -40,7 +40,18 @@
         </section>
 
         <div class="board-wrapper" aria-label="碁盤">
-          <div id="board" class="board" aria-label="量子五目ならべの盤面"></div>
+          <div
+            id="board"
+            class="board"
+            aria-label="量子五目ならべの盤面"
+            role="application"
+            aria-describedby="board-instructions"
+          >
+            <canvas id="board-canvas" class="board-canvas" aria-hidden="true"></canvas>
+            <p id="board-instructions" class="sr-only">
+              盤面をクリックまたはタップして石を置き、観測ボタンで確定させます。
+            </p>
+          </div>
         </div>
 
         <section class="player-panel self-panel" aria-label="自分プレイヤーの操作UI">

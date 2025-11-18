@@ -84,50 +84,25 @@ main.page {
 }
 
 .board {
-  --board-padding: clamp(0.65rem, 2vw, 1.1rem);
-  --grid-line-color: rgba(71, 45, 16, 0.8);
-  --board-size: 11;
-  --grid-step: calc((100% - (var(--board-padding) * 2)) / (var(--board-size) - 1));
-  --stone-size: min(calc(var(--grid-step) * 0.7), 52px);
-  display: block;
+  position: relative;
   width: 100%;
   max-width: 640px;
   aspect-ratio: 1 / 1;
-  gap: 0;
-  background: linear-gradient(135deg, #f4d9a5, #d9b172);
-  border: 2px solid rgba(77, 50, 13, 0.8);
-  border-radius: 0.75rem;
-  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.15), 0 18px 30px rgba(57, 40, 18, 0.45);
-  position: relative;
-  padding: var(--board-padding);
+  border-radius: 0.85rem;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.2), 0 18px 30px rgba(57, 40, 18, 0.45);
   overflow: hidden;
   touch-action: manipulation;
+  background: linear-gradient(135deg, #f4d9a5, #d9b172);
+}
+
+.board-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .player-panel .status-block {
   width: 100%;
-}
-
-.board::before {
-  content: "";
-  position: absolute;
-  top: var(--board-padding);
-  bottom: var(--board-padding);
-  left: var(--board-padding);
-  right: var(--board-padding);
-  background-image: repeating-linear-gradient(
-      to right,
-      transparent 0 calc(var(--grid-step) - 1.5px),
-      var(--grid-line-color) calc(var(--grid-step) - 1.5px) calc(var(--grid-step) + 1.5px)
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0 calc(var(--grid-step) - 1.5px),
-      var(--grid-line-color) calc(var(--grid-step) - 1.5px) calc(var(--grid-step) + 1.5px)
-    );
-  pointer-events: none;
-  opacity: 0.95;
-  z-index: 0;
 }
 
 .board.observation-view::after {
@@ -142,100 +117,6 @@ main.page {
   padding: 0.1rem 0.6rem;
   border-radius: 999px;
   border: 1px solid rgba(43, 30, 15, 0.3);
-}
-
-.cell {
-  --cell-x: 0;
-  --cell-y: 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  top: calc(var(--board-padding) + (var(--grid-step) * var(--cell-y)));
-  left: calc(var(--board-padding) + (var(--grid-step) * var(--cell-x)));
-  width: min(var(--grid-step), 56px);
-  height: min(var(--grid-step), 56px);
-  transform: translate(-50%, -50%);
-  padding: 0;
-  z-index: 1;
-  touch-action: manipulation;
-}
-
-.cell::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(66, 41, 13, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-  transition: transform 150ms ease, opacity 150ms ease;
-}
-
-.cell:not(:disabled):hover::after {
-  transform: translate(-50%, -50%) scale(1.2);
-  background: rgba(66, 41, 13, 0.6);
-}
-
-.cell.cell-has-stone::after {
-  opacity: 0;
-}
-
-.cell:focus-visible {
-  outline: 3px solid rgba(45, 109, 204, 0.7);
-  outline-offset: 3px;
-}
-
-.cell:hover:not(:disabled) .stone.probability-stone {
-  transform: translate(-50%, -50%) translateY(-2px) scale(1.02);
-  box-shadow: 0 10px 15px rgba(18, 13, 5, 0.35);
-}
-
-.cell:disabled {
-  cursor: default;
-}
-
-.stone {
-  width: var(--stone-size);
-  height: var(--stone-size);
-  border-radius: 50%;
-  border: 1px solid rgba(24, 17, 8, 0.35);
-  box-shadow: inset 0 4px 10px rgba(255, 255, 255, 0.35), inset 0 -8px 12px rgba(0, 0, 0, 0.35),
-    0 8px 18px rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-weight: 700;
-  font-size: clamp(0.7rem, 1.8vw, 1rem);
-  letter-spacing: 0.03em;
-  transition: transform 150ms ease, box-shadow 150ms ease;
-  pointer-events: none;
-}
-
-.stone.probability-stone {
-  background: var(--stone-fill, #cfc1a5);
-  color: var(--stone-text-color, #1a1209);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
-}
-
-.stone.resolved.black {
-  background: radial-gradient(circle at 30% 30%, #4b4b4b, #050505);
-  color: transparent;
-}
-
-.stone.resolved.white {
-  background: radial-gradient(circle at 30% 30%, #ffffff, #d5d0c1);
-  color: transparent;
 }
 
 .status-block p {
@@ -385,4 +266,16 @@ main.page {
   .board-wrapper {
     min-height: 560px;
   }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
