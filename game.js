@@ -565,7 +565,7 @@ function renderStatus() {
     if (state.gameOver) {
       detail = state.winner === color ? "勝利" : "終了";
     } else if (state.viewingObservation) {
-      detail = "観測結果表示中";
+      detail = "観測中";
     } else {
       const nextProbability = Math.round(getNextProbability(color) * 100);
       detail = `次${nextProbability}%`;
