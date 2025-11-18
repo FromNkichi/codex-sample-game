@@ -460,35 +460,25 @@ function drawProbabilityStone(ctx, center, radius, cell) {
   const probability = clampProbability(cell.probability);
   const tone = blendStoneColor(probability);
   drawCircle(ctx, center.x, center.y, radius, tone.fill, "rgba(24, 17, 8, 0.35)");
-  const whiteProbability = Math.round((1 - probability) * 100);
-  const blackProbability = Math.round(probability * 100);
   const facing = getStoneTextOrientation(cell);
-  const topText =
-    facing === "white"
-      ? { label: "白", value: whiteProbability }
-      : { label: "黒", value: blackProbability };
-  const bottomText =
-    facing === "white"
-      ? { label: "黒", value: blackProbability }
-      : { label: "白", value: whiteProbability };
-  drawProbabilityText(ctx, center, radius, tone.text, topText, -1);
-  drawProbabilityText(ctx, center, radius, tone.text, bottomText, 1);
+  const displayedProbability = Math.round(
+    (facing === "white" ? 1 - probability : probability) * 100,
+  );
+  drawProbabilityValue(ctx, center, radius, tone.text, displayedProbability, facing);
 }
 
-function drawProbabilityText(ctx, center, radius, color, textInfo, direction) {
+function drawProbabilityValue(ctx, center, radius, color, value, facing) {
   ctx.save();
+  ctx.translate(center.x, center.y);
+  if (facing === "white") {
+    ctx.rotate(Math.PI);
+  }
   ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  const labelFontSize = Math.min(radius * 0.32, 12);
-  const valueFontSize = Math.min(radius * 0.48, 17);
-  const offset = radius * 0.55 * direction;
-  const labelOffset = offset - direction * valueFontSize * 0.4;
-  const valueOffset = offset + direction * labelFontSize * 0.2;
-  ctx.font = `600 ${labelFontSize}px "Noto Sans JP", sans-serif`;
-  ctx.fillText(textInfo.label, center.x, center.y + labelOffset);
-  ctx.font = `700 ${valueFontSize}px "Noto Sans JP", sans-serif`;
-  ctx.fillText(`${textInfo.value}`, center.x, center.y + valueOffset);
+  const fontSize = Math.min(radius * 0.7, 24);
+  ctx.font = `700 ${fontSize}px "Noto Sans JP", sans-serif`;
+  ctx.fillText(`${value}`, 0, 0);
   ctx.restore();
 }
 
