@@ -18,9 +18,7 @@ const elements = {
   board: document.getElementById("board"),
   boardCanvas: document.getElementById("board-canvas"),
   boardWrapper: document.querySelector(".board-wrapper"),
-  statuses: document.querySelectorAll("[data-status]"),
-  stoneInfos: document.querySelectorAll("[data-stone-info]"),
-  decisionInfos: document.querySelectorAll("[data-decision-info]"),
+  playerSummaries: document.querySelectorAll("[data-player-color]"),
   observeButtons: document.querySelectorAll('[data-action="observe"]'),
   skipButtons: document.querySelectorAll('[data-action="skip"]'),
   resetButtons: document.querySelectorAll('[data-action="reset"]'),
@@ -504,12 +502,6 @@ function renderBoard() {
   drawBoardCanvas();
 }
 
-function updateText(nodes, text) {
-  nodes.forEach((node) => {
-    node.textContent = text;
-  });
-}
-
 function toggleButtons(buttons, disabled) {
   buttons.forEach((button) => {
     button.disabled = disabled;
@@ -527,36 +519,21 @@ function updateObserveButtons() {
 }
 
 function renderStatus() {
-  if (state.gameOver) {
-    if (state.observerWin) {
-      updateText(
-        elements.statuses,
-        `${describePlayer(state.winner)}が観測者として勝利しました。黒と白が同時に五目を達成しました。`
-      );
+  elements.playerSummaries.forEach((summary) => {
+    const color = summary.dataset.playerColor;
+    if (!color) return;
+    const label = color === "white" ? "白プレイヤー" : "黒プレイヤー";
+    let detail = "";
+    if (state.gameOver) {
+      detail = state.winner === color ? "勝利" : "終了";
+    } else if (state.viewingObservation) {
+      detail = "観測結果表示中";
     } else {
-      updateText(
-        elements.statuses,
-        `${describePlayer(state.winner)}の勝利！もう一度遊ぶにはリセットしてください。`
-      );
+      const nextProbability = Math.round(getNextProbability(color) * 100);
+      detail = `次${nextProbability}%`;
     }
-    updateText(elements.stoneInfos, "ゲーム終了");
-    updateText(elements.decisionInfos, "");
-  } else if (state.viewingObservation) {
-    updateText(elements.statuses, "観測結果を表示中です。");
-    updateText(elements.stoneInfos, "石は確率に従って黒と白に確定しています。");
-    updateText(elements.decisionInfos, "盤面を確認したら「もどる」で量子盤面に戻ってください。");
-  } else {
-    const player = describePlayer(state.currentPlayer);
-    const probability = Math.round(getNextProbability(state.currentPlayer) * 100);
-    updateText(elements.statuses, `${player}の番です。`);
-    updateText(elements.stoneInfos, `次に置ける石: ${probability}%で黒になります。`);
-    updateText(
-      elements.decisionInfos,
-      state.awaitingDecision
-        ? "観測するか、そのままターンを渡すか選んでください。"
-        : "空いているマスを選んで石を置いてください。"
-    );
-  }
+    summary.textContent = `${label}: ${detail}`;
+  });
   updateObserveButtons();
   const skipDisabled = !state.awaitingDecision || state.gameOver || state.viewingObservation;
   toggleButtons(elements.skipButtons, skipDisabled);
